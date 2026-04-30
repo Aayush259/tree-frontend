@@ -84,7 +84,7 @@ const Node: React.FC<NodeProps> = ({ node, onUpdate, onAdd, onDelete, fetchNodes
                                         <IoIosArrowDown size={18} className={`hover:text-blue-500 transition-all duration-300 ${isExpanded ? "" : "-rotate-90"}`} />
                                     </button>
                                 )}
-                                <div className="px-4 py-2 flex-grow" onClick={() => setIsExpanded(!isExpanded)}>
+                                <div className="px-4 py-2 flex-grow" onClick={() => setIsEditing(true)}>
                                     {node.name}
                                 </div>
                             </div>
