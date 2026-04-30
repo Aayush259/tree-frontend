@@ -41,12 +41,13 @@ function App() {
 
     const addNode = useCallback(async (node: Partial<INode>) => {
         try {
+            const { children, ...rest } = node;
             const response = await fetch(`${API_BASE_URL}/api/tree/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(node)
+                body: JSON.stringify(rest)
             });
             const data = await response.json();
 
@@ -69,12 +70,13 @@ function App() {
 
     const updateNode = useCallback(async (node: Partial<INode>) => {
         try {
+            const { children, ...rest } = node;
             const response = await fetch(`${API_BASE_URL}/api/tree/?id=${node.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(node)
+                body: JSON.stringify(rest)
             });
             const data = await response.json();
 

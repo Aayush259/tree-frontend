@@ -14,6 +14,7 @@ const Node: React.FC<NodeProps> = ({ node, onUpdate, onAdd, onDelete, fetchNodes
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [editableNode, setEditableNode] = useState<INode>(node);
     const [isAddingChild, setIsAddingChild] = useState<boolean>(false);
+    const [isAddingData, setIsAddingData] = useState<boolean>(false);
     const [childNode, setChildNode] = useState<Partial<INode> | null>(null);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -34,6 +35,13 @@ const Node: React.FC<NodeProps> = ({ node, onUpdate, onAdd, onDelete, fetchNodes
         setEditableNode(node);
         setIsAddingChild(false);
         setChildNode(null);
+        setIsAddingData(false);
+    }
+
+    const handleAddData = () => {
+        onUpdate({ ...node, data: childNode?.data || "" });
+        setChildNode(null);
+        setIsAddingData(false);
     }
 
     useEffect(() => {
@@ -68,41 +76,76 @@ const Node: React.FC<NodeProps> = ({ node, onUpdate, onAdd, onDelete, fetchNodes
                 </div>
             ) : (
                 <>
-                    <div className="flex items-center gap-4 border border-slate-300 rounded-lg py-2 px-4 flex-wrap">
-                        <div className="flex-grow flex items-center cursor-pointer">
-                            {node.children && node.children.length > 0 && (
-                                <button onClick={() => setIsExpanded(!isExpanded)}>
-                                    <IoIosArrowDown size={18} className={`hover:text-blue-500 transition-all duration-300 ${isExpanded ? "" : "-rotate-90"}`} />
-                                </button>
-                            )}
-                            <div className="px-4 py-2 flex-grow" onClick={() => setIsExpanded(!isExpanded)}>
-                                {node.name}
+                    <div className="border border-slate-300 rounded-lg">
+                        <div className="flex items-center gap-4 rounded-lg py-2 px-4 flex-wrap">
+                            <div className="flex-grow flex items-center cursor-pointer">
+                                {node.children && node.children.length > 0 && (
+                                    <button onClick={() => setIsExpanded(!isExpanded)}>
+                                        <IoIosArrowDown size={18} className={`hover:text-blue-500 transition-all duration-300 ${isExpanded ? "" : "-rotate-90"}`} />
+                                    </button>
+                                )}
+                                <div className="px-4 py-2 flex-grow" onClick={() => setIsExpanded(!isExpanded)}>
+                                    {node.name}
+                                </div>
                             </div>
+
+                            {!isAddingChild && (
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => {
+                                        setEditableNode(node);
+                                        setIsEditing(true);
+                                    }}>
+                                        <MdEdit className="text-blue-500" size={18} />
+                                    </button>
+
+                                    <button className="btn text-sm px-3 py-1" onClick={() => {
+                                        setIsAddingChild(true)
+                                        setChildNode({ name: "", parent: node.id })
+                                    }}>
+                                        Add Child
+                                    </button>
+
+                                    <button className="btn text-sm px-3 py-1" disabled={isAddingData} onClick={() => {
+                                        setIsAddingData(true)
+                                        setChildNode({ name: "", parent: node.id, data: node.data || "" })
+                                    }}>
+                                        Add Data
+                                    </button>
+
+                                    <button onClick={() => onDelete(node)}>
+                                        <MdDelete className="text-red-500" size={18} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {!isAddingChild && (
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setIsEditing(true)}>
-                                    <MdEdit className="text-blue-500" size={18} />
-                                </button>
+                        {isAddingData && (
+                            <div className="flex items-center gap-4 pl-4 py-2">
+                                <input
+                                    type="text"
+                                    className="border border-slate-300 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-200 flex-grow"
+                                    value={childNode?.data}
+                                    onChange={(e) => setChildNode({ ...childNode, data: e.target.value })}
+                                    placeholder="Enter tree data"
+                                    onKeyDown={(e) => e.key === "Enter" && handleAddData()}
+                                />
 
-                                <button className="btn text-sm px-3 py-1" onClick={() => {
-                                    setIsAddingChild(true)
-                                    setChildNode({ name: "", parent: node.id })
-                                }}>
-                                    Add Child
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button className="btn" onClick={handleAddData}>
+                                        Add
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 bg-slate-200 rounded-full hover:opacity-80"
+                                        onClick={handleCancel}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
-                                <button className="btn text-sm px-3 py-1" onClick={() => {
-                                    setIsAddingChild(true)
-                                    setChildNode({ name: "", parent: node.id })
-                                }}>
-                                    Add Data
-                                </button>
-
-                                <button onClick={() => onDelete(node)}>
-                                    <MdDelete className="text-red-500" size={18} />
-                                </button>
+                        {(node.data?.trim() && !isAddingData) && (
+                            <div className="p-4 bg-slate-50 py-2 rounded-lg rounded-t-none">
+                                {node.data}
                             </div>
                         )}
                     </div>
