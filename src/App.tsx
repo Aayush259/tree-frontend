@@ -8,6 +8,8 @@ function App() {
     const [addingTree, setAddingTree] = useState<boolean>(false);
     const [newTree, setNewTree] = useState<Partial<INode> | null>(null);
     const [isExported, setIsExported] = useState<boolean>(false);
+    const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+    const [isExporting, setIsExporting] = useState<boolean>(false);
 
     const simplifyNode = useCallback((node: INode): any => {
         const simplified: any = { name: node.name };
@@ -54,6 +56,9 @@ function App() {
             }
         } catch (error) {
             console.log(error)
+        } finally {
+            setIsInitialLoading(false);
+            setIsExporting(false);
         }
     }, []);
 
@@ -146,11 +151,11 @@ function App() {
     return (
         <div className="flex flex-col max-w-6xl mx-auto p-6 md:p-10 lg:p-20">
             <div className="flex gap-4 mb-10 ml-auto">
-                <button className="btn" onClick={() => {
+                <button className="btn" disabled={isExporting} onClick={() => {
                     setIsExported(true);
                     fetchNodes(undefined, true);
                 }}>
-                    Export
+                    {isExporting ? "Exporting..." : "Export"}
                 </button>
                 <button className="btn" onClick={() => {
                     setAddingTree(true);
@@ -178,9 +183,16 @@ function App() {
                 </div>
             )}
 
-            {nodes.length == 0 && <div className="text-center text-gray-400">No nodes found. Please add a node.</div>}
+            {isInitialLoading && (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+                    <div className="text-slate-500 font-medium animate-pulse">Loading tree structure...</div>
+                </div>
+            )}
 
-            {nodes.map(node => (
+            {!isInitialLoading && nodes.length == 0 && <div className="text-center text-gray-400">No nodes found. Please add a node.</div>}
+
+            {!isInitialLoading && nodes.map(node => (
                 <Node
                     key={node.id}
                     node={node}
@@ -192,8 +204,23 @@ function App() {
             ))}
 
             {isExported && (
-                <div className="mb-10 p-6 bg-slate-200 rounded-2xl font-mono text-sm">
-                    <pre>{exportedJSON}</pre>
+                <div className="mt-10 relative">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-slate-700">Exported JSON</h3>
+                        <button className="text-sm text-blue-500 hover:underline" onClick={() => setIsExported(false)}>Close</button>
+                    </div>
+                    {isExporting ? (
+                        <div className="p-10 bg-slate-100 rounded-2xl flex items-center justify-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+                                <span className="text-slate-500">Generating JSON...</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-6 bg-slate-200 rounded-2xl font-mono text-sm overflow-x-auto">
+                            <pre>{exportedJSON}</pre>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
