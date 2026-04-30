@@ -7,7 +7,6 @@
     ],
     "module": "esnext",
     "types": [
-      "types.d.ts",
       "node"
     ],
     "skipLibCheck": true,
@@ -24,6 +23,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "vite.config.ts"
+    "vite.config.ts",
+    "types.d.ts"
   ]
 }
