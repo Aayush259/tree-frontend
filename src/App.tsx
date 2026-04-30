@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Node from "./Node";
 
 const API_BASE_URL = import.meta.env.VITE_PUBLIC_API_URL
@@ -7,6 +7,24 @@ function App() {
     const [nodes, setNodes] = useState<INode[]>([]);
     const [addingTree, setAddingTree] = useState<boolean>(false);
     const [newTree, setNewTree] = useState<Partial<INode> | null>(null);
+    const [isExported, setIsExported] = useState<boolean>(false);
+
+    const simplifyNode = useCallback((node: INode): any => {
+        const simplified: any = { name: node.name };
+        if (node.data && node.data.trim() !== "") {
+            simplified.data = node.data;
+        }
+        if (node.children && node.children.length > 0 && typeof node.children[0] === 'object') {
+            simplified.children = (node.children as INode[]).map(simplifyNode);
+        }
+        return simplified;
+    }, []);
+
+    const exportedJSON = useMemo(() => {
+        if (nodes.length === 0) return "[]";
+        const result = nodes.map(node => ({ tree: simplifyNode(node) }));
+        return JSON.stringify(result, null, 2);
+    }, [nodes, simplifyNode]);
 
     const updateNestedNodes = (nodes: INode[], parentId: number, updatedChildren: INode[]): INode[] => {
         return nodes.map(node => {
@@ -20,9 +38,9 @@ function App() {
         });
     };
 
-    const fetchNodes = useCallback(async (parentId?: number) => {
+    const fetchNodes = useCallback(async (parentId?: number, all?: boolean) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/tree/${parentId ? `?parent_id=${parentId}` : ""}`);
+            const response = await fetch(`${API_BASE_URL}/api/tree/${parentId ? `?parent_id=${parentId}` : (all ? "?all=true" : "")}`);
             const data = await response.json();
 
             if (data?.status === "success" && data?.data) {
@@ -52,8 +70,8 @@ function App() {
             const data = await response.json();
 
             if (data?.status === "success" && data?.data) {
-                if (!data.data.parent) {
-                    setNodes(prev => [...prev, data.data]);
+                if (isExported || !data.data.parent) {
+                    fetchNodes(undefined, isExported);
                 } else {
                     fetchNodes(data.data.parent);
                 }
@@ -66,7 +84,7 @@ function App() {
             setNewTree(null);
             setAddingTree(false);
         }
-    }, [fetchNodes]);
+    }, [fetchNodes, isExported]);
 
     const updateNode = useCallback(async (node: Partial<INode>) => {
         try {
@@ -81,25 +99,29 @@ function App() {
             const data = await response.json();
 
             if (data?.status === "success" && data?.data) {
-                const recursiveUpdate = (list: INode[]): INode[] => {
-                    return list.map(n => {
-                        if (n.id === data.data.id) {
-                            return { ...data.data, children: n.children };
-                        }
-                        if (n.children && n.children.length > 0 && typeof n.children[0] === "object") {
-                            return { ...n, children: recursiveUpdate(n.children as INode[]) };
-                        }
-                        return n;
-                    });
-                };
-                setNodes(prev => recursiveUpdate(prev));
+                if (isExported) {
+                    fetchNodes(undefined, true);
+                } else {
+                    const recursiveUpdate = (list: INode[]): INode[] => {
+                        return list.map(n => {
+                            if (n.id === data.data.id) {
+                                return { ...data.data, children: n.children };
+                            }
+                            if (n.children && n.children.length > 0 && typeof n.children[0] === "object") {
+                                return { ...n, children: recursiveUpdate(n.children as INode[]) };
+                            }
+                            return n;
+                        });
+                    };
+                    setNodes(prev => recursiveUpdate(prev));
+                }
             } else {
                 throw new Error("Failed to update node")
             }
         } catch (error) {
             console.log(error)
         }
-    }, []);
+    }, [isExported, fetchNodes]);
 
     const deleteNode = useCallback(async (node: INode) => {
         try {
@@ -109,26 +131,34 @@ function App() {
             const data = await response.json();
 
             if (data?.status === "success") {
-                fetchNodes();
+                fetchNodes(undefined, isExported);
             } else {
                 throw new Error("Failed to delete node")
             }
         } catch (error) {
             console.log(error)
         }
-    }, []);
+    }, [fetchNodes, isExported]);
 
     useEffect(() => {
         fetchNodes();
     }, [fetchNodes]);
     return (
         <div className="flex flex-col max-w-6xl mx-auto p-6 md:p-10 lg:p-20">
-            <button className="ml-auto btn mb-10" onClick={() => {
-                setAddingTree(true);
-                setNewTree({ name: "", parent: null });
-            }}>
-                Add Tree
-            </button>
+            <div className="flex gap-4 mb-10 ml-auto">
+                <button className="btn" onClick={() => {
+                    setIsExported(true);
+                    fetchNodes(undefined, true);
+                }}>
+                    Export
+                </button>
+                <button className="btn" onClick={() => {
+                    setAddingTree(true);
+                    setNewTree({ name: "", parent: null });
+                }}>
+                    Add Tree
+                </button>
+            </div>
 
             {addingTree && (
                 <div className="flex items-center gap-4 flex-wrap">
@@ -160,6 +190,12 @@ function App() {
                     fetchNodes={fetchNodes}
                 />
             ))}
+
+            {isExported && (
+                <div className="mb-10 p-6 bg-slate-200 rounded-2xl font-mono text-sm">
+                    <pre>{exportedJSON}</pre>
+                </div>
+            )}
         </div>
     )
 }
